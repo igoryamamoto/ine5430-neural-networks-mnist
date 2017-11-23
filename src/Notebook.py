@@ -3,7 +3,7 @@
 
 # # Importação de módulos
 
-# In[1]:
+# In[194]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import model_selection, metrics
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder
 import tensorflow as tf
 from keras import backend as K
 import psutil
@@ -49,29 +49,33 @@ K.set_session(session)
 
 # ### Carregamento de dados
 
-# In[3]:
+# In[223]:
 
 
-data = np.loadtxt('exdata.csv', delimiter=',')
+mnist = np.loadtxt('exdata.csv', delimiter=',')
 
-features = data[:-1].T
-target = data[-1]
+data = mnist[:-1].T
+data = np.array(list(map(lambda d: d.reshape((20,20)).T.flatten(), data)))
+target = mnist[-1]
 
 target[target == 10] = 0
 
 
+# In[224]:
+
+
+a = data[4800]
+plt.imshow(a.reshape((20,20)), cmap=plt.get_cmap('gray'))
+
+
 # ### Normalização de dados
 
-# 
-# Para normalizar os dados foi utilizada a classe StandardScaler que permite guardar os parâmetros utilizados para pode reverter a normalização dos dados ou utilizar a mesma normalização em outros dados. Para normalizar é calculado a média e desvio padrão para criar os parâmetros. O método fit_transform realiza o cálculo e a normalização.
-#     
 # A normalização da saída é feita utilizando OneHotEncoder, que transforma aquela saída única em um vetor colocando 0 paras as outras possíveis saídas da rede e 1 para a saída correta.
 
-# In[4]:
+# In[225]:
 
 
-data_scaler = StandardScaler()
-data_normalized = data_scaler.fit_transform(features)
+data_normalized = data
 
 target_scaler = OneHotEncoder()
 target_normalized = target_scaler.fit_transform(target.reshape((-1, 1))).todense()
@@ -82,7 +86,7 @@ target_normalized = target_scaler.fit_transform(target.reshape((-1, 1))).todense
 # 
 # Foi separado 15% dos dados para formarem o conjunto de teste.
 
-# In[5]:
+# In[226]:
 
 
 data_train, data_test, target_train, target_test = train_test_split(
@@ -97,7 +101,7 @@ data_train, data_test, target_train, target_test = train_test_split(
 # 
 # A rede é configurada da seguinte forma: a camada de entrada com 400 neurônios, a hidden layer com 205 neurônios e a camada de saída com 10 neurônios.
 
-# In[73]:
+# In[227]:
 
 
 def mlp():
@@ -112,7 +116,7 @@ def mlp():
 
 # ## Treinamento da rede
 
-# In[74]:
+# In[228]:
 
 
 model = mlp()
@@ -139,7 +143,7 @@ print("Rede treinada/buscada em %.2f segundos" % (time.time() - start_time))
 
 # #### Teste Utilizando Todos os Dados
 
-# In[75]:
+# In[229]:
 
 
 predictions_all = model.predict(data_normalized)
@@ -151,14 +155,14 @@ print("Test set accuracy: {:.2%}".format(
 # 
 # Matriz de confusão para todo o conjunto de dados.
 
-# In[76]:
+# In[230]:
 
 
 confusion_matrix = metrics.confusion_matrix(target, predictions_all)
 sn.heatmap(confusion_matrix, annot=True, fmt='d')
 
 
-# In[77]:
+# In[231]:
 
 
 print(metrics.classification_report(target, predictions_all))
@@ -166,7 +170,7 @@ print(metrics.classification_report(target, predictions_all))
 
 # #### Teste Utilizando Apenas o Conjunto de Teste
 
-# In[78]:
+# In[232]:
 
 
 predictions = model.predict(data_test)
@@ -179,15 +183,42 @@ print("Test set accuracy: {:.2%}".format(
 # 
 # Matriz de confusão para o conjunto teste.
 
-# In[79]:
+# In[233]:
 
 
 confusion_matrix = metrics.confusion_matrix(target_test_classes, predictions)
 sn.heatmap(confusion_matrix, annot=True, fmt='d')
 
 
-# In[80]:
+# In[234]:
 
 
 print(metrics.classification_report(target_test_classes, predictions))
+
+
+# In[251]:
+
+
+from PIL import Image
+import matplotlib.image as mpimg
+from resizeimage import resizeimage
+
+
+with open('5.png', 'r+b') as f:
+    with Image.open(f) as image:
+        cover = resizeimage.resize_cover(image, [20, 20]).convert('L')
+        cover.save('5inho.png', image.format)
+img = mpimg.imread('5inho.png').flatten()
+img.shape
+img2 = np.vstack((data_scaler.fit_transform(img),data_scaler.fit_transform(img)))
+y = model.predict(img2)
+output = y.argmax(axis=1)
+print(y[0][output])
+print(output)
+
+
+# In[239]:
+
+
+plt.imshow(img.reshape((20,20)), cmap=plt.get_cmap('gray'))
 
