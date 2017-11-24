@@ -3,10 +3,11 @@
 
 # # Importação de módulos
 
-# In[194]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
+import random
 import seaborn as sn
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,12 +20,7 @@ import psutil
 import os 
 from keras.models import Sequential
 from keras.layers import Dense, Activation
-#from keras.layers import Dropout
 from keras.utils import np_utils
-#from keras.layers import Flatten
-#from keras.layers.convolutional import Convolution2D
-#from keras.layers.convolutional import MaxPooling2D
-#from keras import backend as K
 K.set_image_dim_ordering('th')
 import time
 
@@ -49,10 +45,12 @@ K.set_session(session)
 
 # ### Carregamento de dados
 
-# In[223]:
+# Os dados são treinados são carregados, separando-se entre os dados contendo features e labels. Os dados de imagens são rotacionados para ficarem na posição correta.
+
+# In[2]:
 
 
-mnist = np.loadtxt('exdata.csv', delimiter=',')
+mnist = np.loadtxt('../data/exdata.csv', delimiter=',')
 
 data = mnist[:-1].T
 data = np.array(list(map(lambda d: d.reshape((20,20)).T.flatten(), data)))
@@ -61,21 +59,26 @@ target = mnist[-1]
 target[target == 10] = 0
 
 
-# In[224]:
+# ### Exemplos de imagens do conjunto de dados
+
+# In[3]:
 
 
-a = data[4800]
-plt.imshow(a.reshape((20,20)), cmap=plt.get_cmap('gray'))
+rows = 2
+cols = 5
+f, axarr = plt.subplots(rows, cols)
+for r in range(rows):
+    for c in range(cols):
+        rand_data = random.choice(data)
+        axarr[r, c].imshow(rand_data.reshape((20,20)), cmap=plt.get_cmap('gray'))
 
 
 # ### Normalização de dados
 
-# A normalização da saída é feita utilizando OneHotEncoder, que transforma aquela saída única em um vetor colocando 0 paras as outras possíveis saídas da rede e 1 para a saída correta.
+# A saída é normalizada através do OneHotEncoder, que transforma o valor do target em um vetor de zeros e valor 1 no índicie correspondente ao valor do target
 
-# In[225]:
+# In[4]:
 
-
-data_normalized = data
 
 target_scaler = OneHotEncoder()
 target_normalized = target_scaler.fit_transform(target.reshape((-1, 1))).todense()
@@ -83,14 +86,13 @@ target_normalized = target_scaler.fit_transform(target.reshape((-1, 1))).todense
 
 # ### Separação de dados treinano/teste
 
-# 
-# Foi separado 15% dos dados para formarem o conjunto de teste.
+# 15% dos dados serão separados para teste
 
-# In[226]:
+# In[6]:
 
 
 data_train, data_test, target_train, target_test = train_test_split(
-    data_normalized,
+    data,
     target_normalized,
     train_size=(85/100),
 )
@@ -98,10 +100,13 @@ data_train, data_test, target_train, target_test = train_test_split(
 
 # ## Definição da arquitetura
 
-# 
-# A rede é configurada da seguinte forma: a camada de entrada com 400 neurônios, a hidden layer com 205 neurônios e a camada de saída com 10 neurônios.
+# |       Camada     |    Neurônios |
+# |---------------------------------|
+# |entrada           | 400          |
+# |hidden layer      | 205          |
+# |          saída   | 10           |
 
-# In[227]:
+# In[7]:
 
 
 def mlp():
@@ -116,7 +121,7 @@ def mlp():
 
 # ## Treinamento da rede
 
-# In[228]:
+# In[8]:
 
 
 model = mlp()
@@ -126,7 +131,13 @@ start_time = time.time()
 treinar = True
 if treinar:
     print("Treinando a rede")
-    model.fit(data_train, target_train, validation_data=(data_test, target_test), epochs=100, batch_size=150, verbose=0)
+    model.fit(data_train, 
+              target_train, 
+              validation_data=(data_test, target_test), 
+              epochs=100, 
+              batch_size=150, 
+              verbose=0
+             )
     model.save_weights("mlp.h5")
     print("Pesos salvos")
 else:
@@ -143,10 +154,10 @@ print("Rede treinada/buscada em %.2f segundos" % (time.time() - start_time))
 
 # #### Teste Utilizando Todos os Dados
 
-# In[229]:
+# In[9]:
 
 
-predictions_all = model.predict(data_normalized)
+predictions_all = model.predict(data)
 predictions_all = np.argmax(predictions_all, axis=1)
 print("Test set accuracy: {:.2%}".format(
     metrics.accuracy_score(target, predictions_all)))
@@ -155,14 +166,14 @@ print("Test set accuracy: {:.2%}".format(
 # 
 # Matriz de confusão para todo o conjunto de dados.
 
-# In[230]:
+# In[10]:
 
 
 confusion_matrix = metrics.confusion_matrix(target, predictions_all)
 sn.heatmap(confusion_matrix, annot=True, fmt='d')
 
 
-# In[231]:
+# In[11]:
 
 
 print(metrics.classification_report(target, predictions_all))
@@ -170,7 +181,7 @@ print(metrics.classification_report(target, predictions_all))
 
 # #### Teste Utilizando Apenas o Conjunto de Teste
 
-# In[232]:
+# In[12]:
 
 
 predictions = model.predict(data_test)
@@ -183,20 +194,39 @@ print("Test set accuracy: {:.2%}".format(
 # 
 # Matriz de confusão para o conjunto teste.
 
-# In[233]:
+# In[13]:
 
 
 confusion_matrix = metrics.confusion_matrix(target_test_classes, predictions)
 sn.heatmap(confusion_matrix, annot=True, fmt='d')
 
 
-# In[234]:
+# In[14]:
 
 
 print(metrics.classification_report(target_test_classes, predictions))
 
 
-# In[251]:
+# ### Alguns erros de classificação
+
+# In[15]:
+
+
+wrong_class = [i for i in range(predictions.size) if predictions[i]!=target_test_classes[i]]
+rows = 2
+cols = 4
+f, axarr = plt.subplots(rows, cols)
+for r in range(rows):
+    for c in range(cols):
+        rand_i = random.choice(wrong_class)
+        axarr[r, c].imshow(data_test[rand_i].reshape((20,20)), cmap=plt.get_cmap('gray'))
+        axarr[r, c].set_title('Pred:{}, Real:{}'.format(predictions[rand_i], 
+                                                        target_test_classes[rand_i]))
+
+
+# # Classificação de novos dados
+
+# In[16]:
 
 
 from PIL import Image
@@ -208,17 +238,18 @@ with open('5.png', 'r+b') as f:
     with Image.open(f) as image:
         cover = resizeimage.resize_cover(image, [20, 20]).convert('L')
         cover.save('5inho.png', image.format)
-img = mpimg.imread('5inho.png').flatten()
-img.shape
-img2 = np.vstack((data_scaler.fit_transform(img),data_scaler.fit_transform(img)))
-y = model.predict(img2)
+with open('7.png', 'r+b') as f:
+    with Image.open(f) as image:
+        cover = resizeimage.resize_cover(image, [20, 20]).convert('L')
+        cover.save('7inho.png', image.format)
+img5 = mpimg.imread('5inho.png').flatten()
+img7 = mpimg.imread('7inho.png').flatten()
+img = np.vstack((img5,img7))
+y = model.predict(img)
 output = y.argmax(axis=1)
 print(y[0][output])
 print(output)
-
-
-# In[239]:
-
-
-plt.imshow(img.reshape((20,20)), cmap=plt.get_cmap('gray'))
+f, axarr = plt.subplots(1, 2)
+axarr[0].imshow(img5.reshape((20,20)), cmap=plt.get_cmap('gray'))
+axarr[1].imshow(img7.reshape((20,20)), cmap=plt.get_cmap('gray'))
 
