@@ -3,7 +3,7 @@
 
 # # Importação de módulos
 
-# In[1]:
+# In[8]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -21,6 +21,7 @@ import os
 from keras.models import Sequential
 from keras.layers import Dense, Activation
 from keras.utils import np_utils
+from keras import optimizers
 K.set_image_dim_ordering('th')
 import time
 
@@ -88,7 +89,7 @@ target_normalized = target_scaler.fit_transform(target.reshape((-1, 1))).todense
 
 # 15% dos dados serão separados para teste
 
-# In[6]:
+# In[5]:
 
 
 data_train, data_test, target_train, target_test = train_test_split(
@@ -100,13 +101,11 @@ data_train, data_test, target_train, target_test = train_test_split(
 
 # ## Definição da arquitetura
 
-# |       Camada     |    Neurônios |
-# |---------------------------------|
-# |entrada           | 400          |
-# |hidden layer      | 205          |
-# |          saída   | 10           |
+# Camada de entrada: 400 neurônios; Hidden layer: 205 neurônios; saída: 10 neurônios
+# Função de Ativação: Relu
+# Otimizador SGD
 
-# In[7]:
+# In[14]:
 
 
 def mlp():
@@ -115,13 +114,15 @@ def mlp():
     model.add(Activation('relu'))
     model.add(Dense(10, kernel_initializer="normal"))
     model.add(Activation('softmax'))
+    #sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    #model.compile(loss='mean_squared_error', optimizer=sgd)
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model
 
 
 # ## Treinamento da rede
 
-# In[8]:
+# In[18]:
 
 
 model = mlp()
@@ -134,7 +135,7 @@ if treinar:
     model.fit(data_train, 
               target_train, 
               validation_data=(data_test, target_test), 
-              epochs=100, 
+              epochs=1000, 
               batch_size=150, 
               verbose=0
              )
@@ -146,7 +147,6 @@ else:
 
 scores = model.evaluate(data_test, target_test, verbose=0)
 
-print("Baseline Error: %.2f%%" % (100-scores[1]*100))
 print("Rede treinada/buscada em %.2f segundos" % (time.time() - start_time))
 
 
@@ -154,7 +154,7 @@ print("Rede treinada/buscada em %.2f segundos" % (time.time() - start_time))
 
 # #### Teste Utilizando Todos os Dados
 
-# In[9]:
+# In[19]:
 
 
 predictions_all = model.predict(data)
@@ -166,7 +166,7 @@ print("Test set accuracy: {:.2%}".format(
 # 
 # Matriz de confusão para todo o conjunto de dados.
 
-# In[10]:
+# In[24]:
 
 
 confusion_matrix = metrics.confusion_matrix(target, predictions_all)
@@ -181,7 +181,7 @@ print(metrics.classification_report(target, predictions_all))
 
 # #### Teste Utilizando Apenas o Conjunto de Teste
 
-# In[12]:
+# In[20]:
 
 
 predictions = model.predict(data_test)
@@ -194,14 +194,14 @@ print("Test set accuracy: {:.2%}".format(
 # 
 # Matriz de confusão para o conjunto teste.
 
-# In[13]:
+# In[21]:
 
 
 confusion_matrix = metrics.confusion_matrix(target_test_classes, predictions)
 sn.heatmap(confusion_matrix, annot=True, fmt='d')
 
 
-# In[14]:
+# In[22]:
 
 
 print(metrics.classification_report(target_test_classes, predictions))
@@ -209,7 +209,7 @@ print(metrics.classification_report(target_test_classes, predictions))
 
 # ### Alguns erros de classificação
 
-# In[15]:
+# In[23]:
 
 
 wrong_class = [i for i in range(predictions.size) if predictions[i]!=target_test_classes[i]]
